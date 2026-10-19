@@ -1,132 +1,44 @@
-name: VPL CI Dev Moodle
+class Cat:
+    # TODO 1: add an extra parameter to the constructor to define the colour
+    # of the cat and store it for use
+    def __init__(self, name, color):
+        self.name = name
+        self.color = color
 
-on: [workflow_dispatch]
+    def meow(self):
+        print(f"Meow my name is {self.name}")
 
-jobs:
-  test:
-    runs-on: ubuntu-24.04
+    # TODO 2: Define a method called Jump that takes in a value and prints
+    # "The {color} cat jumps x meters high"
+    # NOTE: the {color} part refers to the colour attribute you defined
+    # in the constructor above.
+    def Jump(self, height):
+        print(f"The {self.color} cat jumps {height} meters high")
 
-    services:
-      postgres:
-        image: postgres:18
-        env:
-          POSTGRES_USER: 'postgres'
-          POSTGRES_HOST_AUTH_METHOD: 'trust'
-        ports:
-          - 5432:5432
-        options: --health-cmd pg_isready --health-interval 10s --health-timeout 5s --health-retries 3
+def demo():
+    cat1 = Cat("sussie", "orange")
+    cat2 = Cat("Bob", "black")
+    
+    # TODO 3: Create a new cat object with name JOHN and colour purple
+    cat3 = Cat("JOHN", "purple")
 
-      mariadb:
-        image: mariadb:12.3
-        env:
-          MYSQL_ALLOW_EMPTY_PASSWORD: "true"
-          MYSQL_CHARACTER_SET_SERVER: "utf8mb4"
-          MYSQL_COLLATION_SERVER: "utf8mb4_unicode_ci"
-        ports:
-          - 3306:3306
-        options: --health-cmd="healthcheck.sh --connect --innodb_initialized" --health-interval 10s --health-timeout 5s --health-retries 3
+    cat1.meow()
+    cat2.meow()
+    cat3.meow()
+    
+    cat1.name = "Tiffany"
+    
+    # TODO 4: Change the colour of cat 2 to be white and observe the change
+    cat2.color = "white"
 
-    strategy:
-      fail-fast: false
-      matrix:
-        php: ['8.4']
-        moodle-branch: ['main']
-        database: [pgsql, mariadb]
+    cat1.meow()
+    cat2.meow()
+    
+    # TODO 5: Call the newly defined Jump method on each cat here
+    # and observe what it prints
+    cat1.Jump(3)
+    cat2.Jump(5)
+    cat3.Jump(4)
 
-    steps:
-      - name: Check out repository code
-        uses: actions/checkout@v5
-        with:
-          path: plugin
-
-      - name: Setup PHP ${{ matrix.php }}
-        uses: shivammathur/setup-php@v2
-        with:
-          php-version: ${{ matrix.php }}
-          ini-values: max_input_vars=5000
-          # If you are not using code coverage, keep "none". Otherwise, use "pcov" (Moodle 3.10 and up) or "xdebug".
-          # If you try to use code coverage with "none", it will fallback to phpdbg (which has known problems).
-          coverage: none
-
-      - name: Initialise moodle-plugin-ci
-        run: |
-          composer create-project -n --no-dev --prefer-dist moodlehq/moodle-plugin-ci ci ^4
-          echo $(cd ci/bin; pwd) >> $GITHUB_PATH
-          echo $(cd ci/vendor/bin; pwd) >> $GITHUB_PATH
-          sudo locale-gen en_AU.UTF-8
-          echo "NVM_DIR=$HOME/.nvm" >> $GITHUB_ENV
-
-      - name: Install moodle-plugin-ci
-        run: moodle-plugin-ci install --plugin ./plugin --db-host=127.0.0.1
-        env:
-          DB: ${{ matrix.database }}
-          MOODLE_BRANCH: ${{ matrix.moodle-branch }}
-          # Uncomment this to run Behat tests using the Moodle App.
-          # MOODLE_APP: 'true'
-
-      - name: PHP Lint
-        if: ${{ !cancelled() }}
-        run: moodle-plugin-ci phplint
-  
-      - name: PHP Mess Detector
-        if: ${{ !cancelled() }}
-        run: moodle-plugin-ci phpmd
-
-      - name: Moodle Code Checker
-        if: ${{ !cancelled() }}
-        run: moodle-plugin-ci phpcs --max-warnings 0
-
-      - name: Moodle PHPDoc Checker
-        if: ${{ !cancelled() }}
-        run: moodle-plugin-ci phpdoc --max-warnings 0
-
-      - name: Validating
-        if: ${{ !cancelled() }}
-        run: moodle-plugin-ci validate
-
-      - name: Check upgrade savepoints
-        if: ${{ !cancelled() }}
-        run: moodle-plugin-ci savepoints
-
-      - name: Mustache Lint
-        if: ${{ !cancelled() }}
-        run: moodle-plugin-ci mustache
-
-      - name: Grunt
-        if: ${{ !cancelled() }}
-        run: moodle-plugin-ci grunt --max-lint-warnings 0
-
-      - name: PHPUnit tests
-        if: ${{ !cancelled() }}
-        run: moodle-plugin-ci phpunit --fail-on-warning
-
-      - name: Behat features
-        id: behat
-        if: ${{ !cancelled() }}
-        run: moodle-plugin-ci behat --profile chrome
-  
-      - name: Install valgrind
-        continue-on-error: true # This step may fail but the job can continue
-        if: ${{ always() }}
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y valgrind
-
-      - name: Tests of VPL default "Basic I/O test" for students' programs
-        if: ${{ always() }}
-        run: ./plugin/tests/vpl_evaluate/test_vpl_evaluate.sh
-      
-      - name: Tests tester of automatic evaluation of students' programs
-        if: ${{ always() }}
-        run: ./plugin/tests/vpl_evaluate/test_tester_vpl_evaluate.sh
-
-      - name: Tests of evaluators subplugins
-        if: ${{ always() }}
-        run: |
-          cd ./plugin/evaluator
-          for evaluator in $(ls -d *); do
-            if [ -f "${evaluator}/tests/run_tests.sh" ]; then
-              chmod +x "./${evaluator}/tests/run_tests.sh"
-              "./${evaluator}/tests/run_tests.sh"
-            fi
-          done
+    # Leave this line as it is - it hands your cats to the marker.
+    return locals()
